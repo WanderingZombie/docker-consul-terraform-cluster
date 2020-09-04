@@ -2,23 +2,27 @@
 #               Start up the master with ports and volumes
 ######################################################################################
 provider "docker" {
-  host = "unix:///var/run/docker.sock"
+  #host = "unix:///var/run/docker.sock"  # linux
+  #host = "tcp://127.0.0.1:2375/"   # windows without TLS
+
+  version = "~> 2.6"
+  host    = "npipe:////.//pipe//docker_engine"  # windows with TLS
 }
 
 resource "docker_image" "consul-master" {
-  name         = "maguec/consul-master"
+  name = "maguec/consul-master"
   keep_locally = false
 }
 
 resource "docker_container" "consul-master" {
-  name    = "consul1"
-  image   = "${docker_image.consul-master.latest}"
-  command = [ 
-              "-server",
-              "-bootstrap-expect=1",
-              "-dc=docker",
-              "-node=consul1"
-            ]
+  name = "consul1"
+  image = docker_image.consul-master.latest
+  command = [
+    "-server",
+    "-bootstrap",  # self-elect as the Raft leader
+    "-node=consul1",
+    "-ui",
+  ]
   ports {
     internal = 8300
     external = 8300
@@ -52,39 +56,47 @@ resource "docker_container" "consul-master" {
   }
   volumes {
     container_path = "/data"
-    host_path      = "/data/docker/consul1"
+    host_path = "C:\\Users\\jp_ni\\data\\docker\\consul1"
   }
 }
 #####################################################################################
 resource "docker_container" "consul2" {
-  name    = "consul2"
-  image   = "${docker_image.consul-master.latest}"
-  command = [ "-server",
-              "-join=${docker_container.consul-master.ip_address}",
-              "-node=consul2",
-              "-dc=docker"]
+  name = "consul2"
+  image = docker_image.consul-master.latest
+  command = [
+    "-server",
+    "-join=${docker_container.consul-master.ip_address}",
+    "-node=consul2",
+    "-ui",
+  ]
 }
 ######################################################################################
 resource "docker_container" "consul3" {
-  name    = "consul3"
-  image   = "${docker_image.consul-master.latest}"
-  command = [ "-server",
-              "-join=${docker_container.consul-master.ip_address}",
-              "-node=consul3",
-              "-dc=docker"]
+  name = "consul3"
+  image = docker_image.consul-master.latest
+  command = [
+    "-server",
+    "-join=${docker_container.consul-master.ip_address}",
+    "-node=consul3",
+    "-ui",
+  ]
 }
 ######################################################################################
-# Set an example kye in the key/value store
+# Set an example key in the key/value store
 provider "consul" {
-  address    = "localhost:8500"
+  address = "localhost:8500"
   datacenter = "docker"
-  scheme     = "http"
+  scheme = "http"
+  version = "~> 2.9.0"
 }
+
+# if this doesn't work first time, run plan and apply again
 resource "consul_keys" "example_key" {
   datacenter = "docker"
   key {
-    name  = "ludicrous-setting"
-    path  = "settings/global/speed/ludicrous"
+    path = "settings/global/speed/ludicrous"
     value = "on"
   }
+  # wait for all 3 containers to complete, but doesn't ensure that a leader has been elected
+  depends_on = [docker_container.consul-master, docker_container.consul2, docker_container.consul3]
 }

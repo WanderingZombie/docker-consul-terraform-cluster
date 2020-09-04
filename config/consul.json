@@ -1,10 +1,10 @@
 {
-	"data_dir": "/data",
-	"datacenter": "docker",
-	"ui_dir": "/ui",
-	"client_addr": "0.0.0.0",
-	"ports": {
-		"dns": 53
-	},
-	"recursor": "8.8.8.8"
+  "data_dir": "/data",
+  "datacenter": "docker",
+  "client_addr": "0.0.0.0",
+  "ports": {
+    "dns": 53
+  },
+  "recursors": ["8.8.8.8"],
+  "leave_on_terminate": true
 }
