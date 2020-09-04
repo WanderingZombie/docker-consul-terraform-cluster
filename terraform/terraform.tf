@@ -2,16 +2,13 @@
 #               Start up the master with ports and volumes
 ######################################################################################
 provider "docker" {
-  #host = "unix:///var/run/docker.sock"  # linux
-  #host = "tcp://127.0.0.1:2375/"   # windows without TLS
-
   version = "~> 2.6"
-  host    = "npipe:////.//pipe//docker_engine"  # windows with TLS
+  host = var.docker_connection
 }
 
 resource "docker_image" "consul-master" {
   name = "maguec/consul-master"
-  keep_locally = false
+  keep_locally = true  # true = keep image if we do "terraform destroy"
 }
 
 resource "docker_container" "consul-master" {
@@ -56,7 +53,7 @@ resource "docker_container" "consul-master" {
   }
   volumes {
     container_path = "/data"
-    host_path = "C:\\Users\\jp_ni\\data\\docker\\consul1"
+    host_path = var.consul_persistent_storage_path
   }
 }
 #####################################################################################
